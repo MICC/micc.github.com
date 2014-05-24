@@ -6,6 +6,8 @@ body {
 	/*Browser Specific*/
 	background: url('../images/3d2.png') no-repeat center center;
 	margin-top:100px;
+	margin-right: 10px;
+	margin-left: 10px;
 	opacity: .6;
 
 	background-size: contain;
@@ -18,6 +20,8 @@ body {
 	background: url('../images/DWH-G3-D4-I29.png') no-repeat center center;
 
 	background-size: contain;
+	margin-right: 10px;
+	margin-left: 10px;
 	text-align: center;
 	padding:120px 0;
 	height: 400px;
