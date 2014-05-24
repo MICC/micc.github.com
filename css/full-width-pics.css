@@ -5,10 +5,9 @@ body {
 .full-width-image-1 {
 	/*Browser Specific*/
 	background: url('../images/3d2.png') no-repeat center center;
-	margin-top:100px;
 	margin-right: 10px;
 	margin-left: 10px;
-	opacity: .6;
+	opacity: .8;
 
 	background-size: contain;
 	text-align: center;
@@ -18,21 +17,24 @@ body {
 
 .full-width-image-2 {
 	background: url('../images/DWH-G3-D4-I29.png') no-repeat center center;
+	opacity: .8;
 
 	background-size: contain;
 	margin-right: 10px;
 	margin-left: 10px;
+	margin-bottom: 20px;
 	text-align: center;
 	padding:120px 0;
 	height: 400px;
 }
 
 .logo-wrapper {
-	display: inline-block;
+	text-align: center;
 
 }
 .header {
 	font-size: 4em;
+	padding: 80px; 
 	font-weight: 300; 
 	opacity:1.0;
 }
