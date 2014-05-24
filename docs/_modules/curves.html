@@ -1,0 +1,930 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>curves &mdash; MICC . documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '.',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="MICC . documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">MICC . documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for curves</h1><div class="highlight"><pre>
+<span class="c"># Paul Glenn</span>
+<span class="c"># curves.py</span>
+<span class="c"># Give curve pairs class structure in preparation for public access</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">product</span>
+<span class="kn">from</span> <span class="nn">graph</span> <span class="kn">import</span> <span class="n">Graph</span>
+
+
+
+
+
+<div class="viewcode-block" id="fixMatrixSigns"><a class="viewcode-back" href="../index.html#curves.fixMatrixSigns">[docs]</a><span class="k">def</span> <span class="nf">fixMatrixSigns</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	function fixMatrixSigns</span>
+<span class="sd">	@param M : The (2,num_vertices,4) matrix whose signs need fixing.</span>
+
+<span class="sd">	Given a matrix corresponding to a curve pair,</span>
+<span class="sd">	fixes the signs so that the matrix can be traversed by function bdycount.</span>
+<span class="sd">	Starts from the simples point, then assigns based on matching values and</span>
+<span class="sd">	ENS: No qualitative results about the curve pair will be changed by this,</span>
+<span class="sd">		 since orientation is just a formality.</span>
+<span class="sd">	@return M : The matrix with proper signs.</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+	<span class="c">#print &#39;before:&#39;</span>
+	<span class="c">#print M</span>
+	<span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+	<span class="n">sgn</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="c">#for ii in range(len(M[0,:])):</span>
+	<span class="k">while</span> <span class="mi">0</span> <span class="ow">in</span> <span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,:,</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">and</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+		<span class="n">row</span> <span class="o">+=</span> <span class="mi">1</span>
+		<span class="n">sgn</span> <span class="o">=</span> <span class="o">-</span><span class="n">sgn</span>
+		<span class="c"># Starting position and sign are arbitrary.</span>
+		<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+			<span class="n">gval</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">row</span><span class="p">,</span><span class="n">col</span><span class="p">])</span>
+			<span class="n">new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">gval</span><span class="p">,:]</span><span class="o">==</span><span class="n">row</span><span class="p">)</span> <span class="p">)</span>
+			<span class="c">#print  np.where(new%2==col%2)</span>
+			<span class="n">ind</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">new</span><span class="p">[</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">new</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="n">col</span><span class="o">%</span><span class="mi">2</span><span class="p">)]</span> <span class="p">)</span>
+			<span class="n">sgn</span> <span class="o">=</span> <span class="o">-</span><span class="n">sgn</span>
+			<span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">gval</span><span class="p">,</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">sgn</span>
+			<span class="n">ind</span> <span class="o">+=</span> <span class="mi">2</span>
+			<span class="n">ind</span> <span class="o">=</span> <span class="n">ind</span> <span class="o">%</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+			<span class="n">sgn</span> <span class="o">=</span> <span class="o">-</span><span class="n">sgn</span>
+			<span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">gval</span><span class="p">,</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">sgn</span>
+			<span class="n">row</span> <span class="o">=</span> <span class="n">gval</span>
+			<span class="n">col</span> <span class="o">=</span> <span class="n">ind</span>
+		<span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+		<span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,:,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="c">#print &#39;after:&#39;</span>
+	<span class="c">#print M</span>
+	<span class="k">return</span> <span class="n">M</span>
+
+</div>
+<div class="viewcode-block" id="concatenateMatrix"><a class="viewcode-back" href="../index.html#curves.concatenateMatrix">[docs]</a><span class="k">def</span> <span class="nf">concatenateMatrix</span><span class="p">(</span><span class="n">M1</span><span class="p">,</span> <span class="n">M2</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	function concatenateMatrix</span>
+<span class="sd">	@param M1, M2 : Matrices to be combined</span>
+<span class="sd">	concatenateMatrix (matrix 1, matrix 2)</span>
+
+<span class="sd">	Combines two curve pairs into one.</span>
+<span class="sd">	REQ: curve pairs are, of course, encoded as matrices.</span>
+<span class="sd">	INV: new matrix signs will be correct</span>
+<span class="sd">	INV: final matrix will correspond to a single curve.</span>
+<span class="sd">	@return M : final Matrix</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+	<span class="n">topM</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">M1</span><span class="p">)</span>
+	<span class="n">botM</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">M2</span><span class="p">)</span>
+	<span class="n">n</span> <span class="o">=</span> <span class="n">M1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+	<span class="n">m</span> <span class="o">=</span> <span class="n">M2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+	<span class="n">topM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span> <span class="o">+</span> <span class="n">m</span> <span class="o">-</span> <span class="mi">1</span>
+	<span class="n">topM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+	<span class="n">botM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">M2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+	<span class="n">botM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">m</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="n">botM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span>
+	<span class="n">newM</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">topM</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">botM</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="c">#  Multi-curve</span>
+	<span class="n">newM</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">newM</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">topM</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">botM</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span><span class="n">n</span><span class="o">+</span><span class="n">m</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+
+	<span class="n">left</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">topM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">topM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+	<span class="n">i0</span><span class="p">,</span> <span class="n">j0</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span>
+	<span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">left</span><span class="p">:</span>
+		<span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">pair</span>
+		<span class="k">if</span> <span class="n">j</span><span class="o">%</span><span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">i0</span><span class="p">,</span><span class="n">j0</span> <span class="o">=</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span>
+	<span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">i0</span><span class="p">,</span><span class="n">j0</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+
+	<span class="n">tempInd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,:]</span> <span class="o">==</span> <span class="n">i0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="n">tempInd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tempInd</span><span class="p">[</span><span class="n">tempInd</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+	<span class="n">tempVal</span> <span class="o">=</span> <span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tempInd</span><span class="p">]</span>
+	<span class="n">switchVal</span> <span class="o">=</span> <span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">tempInd</span><span class="p">]</span>
+	<span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tempInd</span><span class="p">]</span> <span class="o">=</span> <span class="n">switchVal</span>
+	<span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">tempInd</span><span class="p">]</span> <span class="o">=</span> <span class="n">tempVal</span>
+	<span class="n">returnInd</span> <span class="o">=</span> <span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">switchVal</span><span class="p">,:]</span> <span class="o">==</span> <span class="n">n</span>
+	<span class="n">returnInd</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+	<span class="n">newM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">switchVal</span><span class="p">,</span><span class="n">returnInd</span><span class="o">==</span><span class="bp">True</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span>
+
+	<span class="k">return</span> <span class="n">fixMatrixSigns</span><span class="p">(</span><span class="n">newM</span><span class="p">)</span>
+<span class="c">## Path finding methods -- used to find edge paths in the complement of beta-curve.</span>
+<span class="c">## Most are helpers for findAllPaths below.</span></div>
+<div class="viewcode-block" id="visited"><a class="viewcode-back" href="../index.html#curves.visited">[docs]</a><span class="k">def</span> <span class="nf">visited</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="n">face</span> <span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+	<span class="n">myface</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">face</span><span class="p">)</span>
+	<span class="n">myface</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">curr</span><span class="p">)</span>
+	<span class="n">v</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">myface</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span> <span class="n">v</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="k">return</span> <span class="n">v</span>
+</div>
+<div class="viewcode-block" id="isUnique"><a class="viewcode-back" href="../index.html#curves.isUnique">[docs]</a><span class="k">def</span> <span class="nf">isUnique</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">AllPaths</span><span class="p">):</span>
+	<span class="k">return</span> <span class="ow">not</span> <span class="p">(</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">AllPaths</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="shift"><a class="viewcode-back" href="../index.html#curves.shift">[docs]</a><span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+	<span class="n">temp</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+	<span class="k">return</span> <span class="n">path</span><span class="p">[</span><span class="n">temp</span><span class="p">:]</span> <span class="o">+</span> <span class="n">path</span><span class="p">[:</span><span class="n">temp</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="invert"><a class="viewcode-back" href="../index.html#curves.invert">[docs]</a><span class="k">def</span> <span class="nf">invert</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+	<span class="k">return</span> <span class="n">shift</span><span class="p">(</span><span class="n">path</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="pathFinishedSingle"><a class="viewcode-back" href="../index.html#curves.pathFinishedSingle">[docs]</a><span class="k">def</span> <span class="nf">pathFinishedSingle</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">face</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+	<span class="n">C</span>  <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">2</span> <span class="ow">and</span> <span class="p">(</span><span class="n">edge</span> <span class="o">==</span> <span class="n">path</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+	<span class="n">faceL</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">face</span><span class="p">)</span>
+	<span class="n">faceL</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+	<span class="n">C</span> <span class="o">=</span> <span class="n">C</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">faceL</span><span class="p">)</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+	<span class="c">#meeting = lambda e1, e2, face: e1 in face and e2 in face</span>
+	<span class="k">return</span> <span class="n">C</span>
+</div>
+<div class="viewcode-block" id="pathFinishedDouble"><a class="viewcode-back" href="../index.html#curves.pathFinishedDouble">[docs]</a><span class="k">def</span> <span class="nf">pathFinishedDouble</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">face</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+	<span class="n">C</span>  <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">2</span> <span class="ow">and</span> <span class="p">(</span><span class="n">edge</span> <span class="o">==</span> <span class="n">path</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+	<span class="n">faceL</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">face</span><span class="p">)</span>
+	<span class="n">faceL</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+	<span class="n">C</span> <span class="o">=</span> <span class="n">C</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">faceL</span><span class="p">)</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+	<span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span> <span class="p">:</span> <span class="n">C</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="c">#meeting = lambda e1, e2, face: e1 in face and e2 in face</span>
+	<span class="k">return</span> <span class="n">C</span>
+</div>
+<div class="viewcode-block" id="findNewPaths"><a class="viewcode-back" href="../index.html#curves.findNewPaths">[docs]</a><span class="k">def</span> <span class="nf">findNewPaths</span><span class="p">(</span><span class="n">currentPath</span><span class="p">,</span> <span class="n">myface</span><span class="p">,</span> <span class="n">faces</span><span class="p">,</span> <span class="n">AllPaths</span><span class="p">,</span> <span class="n">pathFunction</span><span class="p">):</span>
+	<span class="n">start</span> <span class="o">=</span> <span class="n">currentPath</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="n">nextEdge</span> <span class="o">=</span> <span class="bp">None</span>
+	<span class="n">subPath</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="n">facesWithoutCurrentFace</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">faces</span><span class="p">)</span>
+	<span class="n">facesWithoutCurrentFace</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">myface</span><span class="p">)</span>
+	<span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">faces</span><span class="p">:</span> <span class="c">#Check all faces...</span>
+		<span class="k">if</span> <span class="n">start</span> <span class="ow">in</span> <span class="n">face</span> <span class="ow">and</span> <span class="n">face</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">myface</span><span class="p">:</span>
+			<span class="c">#if we find the start edge in another face...</span>
+			<span class="k">for</span> <span class="n">otherface</span> <span class="ow">in</span> <span class="n">facesWithoutCurrentFace</span><span class="p">:</span>
+				<span class="c">#go through its edges...</span>
+				<span class="k">if</span> <span class="n">start</span> <span class="ow">in</span> <span class="n">otherface</span><span class="p">:</span> <span class="c"># needed?</span>
+					<span class="n">faceWithoutStart</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">otherface</span><span class="p">)</span>
+					<span class="n">faceWithoutStart</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+
+					<span class="k">for</span> <span class="n">nonStartingEdge</span> <span class="ow">in</span> <span class="n">faceWithoutStart</span><span class="p">:</span>
+						<span class="c"># try all edges in that path</span>
+						<span class="n">nextEdge</span> <span class="o">=</span> <span class="n">nonStartingEdge</span>
+						<span class="k">if</span>  <span class="p">(</span><span class="ow">not</span> <span class="n">visited</span><span class="p">(</span> <span class="n">start</span><span class="p">,</span> <span class="n">otherface</span><span class="p">,</span> <span class="n">currentPath</span> <span class="p">)</span> <span class="p">)</span> <span class="ow">and</span>\
+							<span class="p">(</span><span class="n">nextEdge</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">myface</span><span class="p">):</span>
+							<span class="n">subPath</span> <span class="o">=</span> <span class="p">[</span><span class="n">nextEdge</span><span class="p">]</span>
+							<span class="n">subPath</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">currentPath</span><span class="p">)</span>
+
+							<span class="c"># Recursive call to take all possible directions</span>
+							<span class="n">findNewPaths</span><span class="p">(</span><span class="n">subPath</span><span class="p">,</span> <span class="n">otherface</span><span class="p">,</span> <span class="n">faces</span><span class="p">,</span> <span class="n">AllPaths</span><span class="p">,</span> <span class="n">pathFunction</span><span class="p">)</span>
+
+						<span class="k">elif</span> <span class="n">pathFunction</span><span class="p">(</span><span class="n">nextEdge</span><span class="p">,</span> <span class="n">otherface</span><span class="p">,</span> <span class="n">currentPath</span><span class="p">):</span>
+							<span class="n">newFoundPath</span> <span class="o">=</span> <span class="n">shift</span><span class="p">(</span><span class="n">currentPath</span><span class="p">)</span>
+							<span class="n">invertedPath</span> <span class="o">=</span> <span class="n">invert</span><span class="p">(</span><span class="n">currentPath</span><span class="p">)</span>
+							<span class="n">unique</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">path</span><span class="p">:</span> <span class="n">isUnique</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">AllPaths</span><span class="p">)</span>
+							<span class="k">if</span> <span class="n">unique</span><span class="p">(</span><span class="n">newFoundPath</span><span class="p">)</span> <span class="ow">and</span> <span class="n">unique</span><span class="p">(</span><span class="n">invertedPath</span><span class="p">):</span>
+								<span class="n">AllPaths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">newFoundPath</span><span class="p">)</span>
+					<span class="n">faceWithoutStart</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+		<span class="n">facesWithoutCurrentFace</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">face</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="removeDuplicates"><a class="viewcode-back" href="../index.html#curves.removeDuplicates">[docs]</a><span class="k">def</span> <span class="nf">removeDuplicates</span><span class="p">(</span><span class="n">faces</span><span class="p">,</span> <span class="n">AllPaths</span><span class="p">):</span>
+	<span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">AllPaths</span><span class="p">)</span>
+	<span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">faces</span><span class="p">:</span>
+			<span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+			<span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+				<span class="k">if</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span> <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+			<span class="k">if</span> <span class="n">counter</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span> <span class="n">AllPaths</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">AllPaths</span>
+</div>
+<div class="viewcode-block" id="findAllPaths"><a class="viewcode-back" href="../index.html#curves.findAllPaths">[docs]</a><span class="k">def</span> <span class="nf">findAllPaths</span><span class="p">(</span><span class="n">faces</span><span class="p">):</span>
+	<span class="n">AllPaths</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="n">forward</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">path</span><span class="p">,</span> <span class="n">face</span><span class="p">,</span> <span class="n">pathFunction</span><span class="p">:</span> <span class="n">findNewPaths</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">face</span><span class="p">,</span> <span class="n">faces</span><span class="p">,</span> <span class="n">AllPaths</span><span class="p">,</span> <span class="n">pathFunction</span><span class="p">)</span>
+	<span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">faces</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">face</span><span class="p">:</span>
+			<span class="n">forward</span><span class="p">([</span><span class="n">edge</span><span class="p">],</span> <span class="n">face</span><span class="p">,</span> <span class="n">pathFinishedSingle</span><span class="p">)</span>
+			<span class="c">#forward([edge], face, pathFinishedDouble)</span>
+	<span class="n">AllPaths</span> <span class="o">=</span> <span class="n">removeDuplicates</span><span class="p">(</span><span class="n">faces</span><span class="p">,</span><span class="n">AllPaths</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">AllPaths</span>
+
+<span class="c">## Now that we have the paths, they need to be</span>
+<span class="c">## re- indexed so that matrices can be built from them.</span></div>
+<div class="viewcode-block" id="buildMatrices"><a class="viewcode-back" href="../index.html#curves.buildMatrices">[docs]</a><span class="k">def</span> <span class="nf">buildMatrices</span><span class="p">(</span><span class="n">edgePaths</span><span class="p">,</span> <span class="n">AllPaths</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	function buildMatrices</span>
+<span class="sd">	@param edgePaths : list of face boundary orientations</span>
+<span class="sd">	@param allPaths : lsit</span>
+<span class="sd">	buildMatrices(edgePaths, AllPaths)</span>
+<span class="sd">	Take the paths in the skeleton of the complement of the transverse curve</span>
+<span class="sd">	And create matrices.</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+	<span class="c">#print &#39;edgePaths:&#39;,edgePaths</span>
+	<span class="c">#print &#39;AllPaths:&#39;,AllPaths[0].loops</span>
+	<span class="n">MasterList</span> <span class="o">=</span> <span class="p">[]</span>
+
+	<span class="c"># Allow paths to be referenced by face</span>
+	<span class="c">#print edgePaths</span>
+	<span class="k">for</span> <span class="n">itr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">edgePaths</span><span class="p">)):</span>
+		<span class="n">edgePaths</span><span class="p">[</span><span class="n">itr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">edgePaths</span><span class="p">[</span><span class="n">itr</span><span class="p">])</span>
+
+	<span class="n">orderedPaths</span> <span class="p">,</span> <span class="n">mappedPaths</span> <span class="o">=</span> <span class="p">[],[]</span>
+
+	<span class="c"># Rescale path 0-len(path) for matrix</span>
+	<span class="k">for</span> <span class="n">Path</span> <span class="ow">in</span> <span class="n">AllPaths</span><span class="p">:</span>
+		<span class="n">orderedPath</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">Path</span><span class="p">))</span>
+		<span class="n">orderedPaths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">orderedPath</span><span class="p">)</span>
+		<span class="n">mappedPaths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">orderedPath</span><span class="p">,</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Path</span><span class="p">)))))</span>
+
+	<span class="c">#Create Matrices using details from edge paths.</span>
+	<span class="k">for</span> <span class="n">Path</span><span class="p">,</span><span class="n">mappedPath</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">AllPaths</span><span class="p">,</span><span class="n">mappedPaths</span><span class="p">):</span>
+		<span class="c">#Value Matrix</span>
+		<span class="n">pathSize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Path</span><span class="p">)</span> <span class="p">;</span> <span class="n">shape</span> <span class="o">=</span><span class="p">(</span><span class="n">pathSize</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+		<span class="n">last</span> <span class="o">=</span> <span class="n">Path</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">Path</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+		<span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">);</span>
+		<span class="n">M2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+		<span class="n">M</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">pathSize</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="nb">range</span><span class="p">(</span><span class="n">pathSize</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+		<span class="n">M</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">pathSize</span><span class="p">)</span><span class="o">+</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+		<span class="n">pastEdges</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">();</span> <span class="n">futureEdges</span> <span class="o">=</span>  <span class="nb">dict</span><span class="p">()</span>
+		<span class="n">old_vertex</span> <span class="o">=</span> <span class="n">last</span>
+
+		<span class="n">itr</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="k">for</span> <span class="n">vertex</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">:</span>
+			<span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+			<span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">edgePaths</span><span class="p">:</span>
+				<span class="n">keys</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+				<span class="k">if</span> <span class="n">vertex</span> <span class="ow">in</span> <span class="n">keys</span> <span class="ow">and</span> <span class="n">old_vertex</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+					<span class="n">pastEdges</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span>
+					<span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+				<span class="k">if</span> <span class="n">vertex</span> <span class="ow">in</span> <span class="n">keys</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">[</span><span class="n">itr</span><span class="o">%</span><span class="n">pathSize</span><span class="p">]</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+					<span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
+						<span class="n">futureEdges</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span><span class="o">+</span> <span class="mi">2</span><span class="p">)</span> <span class="o">%</span><span class="mi">4</span>
+					<span class="k">else</span><span class="p">:</span>
+						<span class="n">futureEdges</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span>
+				<span class="n">flag</span> <span class="o">=</span><span class="bp">False</span>
+			<span class="n">old_vertex</span> <span class="o">=</span> <span class="n">vertex</span>
+			<span class="n">itr</span> <span class="o">+=</span> <span class="mi">1</span>
+		<span class="n">old_vertex</span> <span class="o">=</span> <span class="n">last</span><span class="p">;</span>
+
+		<span class="n">itr</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="k">for</span> <span class="n">vertex</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">:</span>
+			<span class="n">curr_vertex</span> <span class="o">=</span> <span class="n">vertex</span>
+			<span class="n">next_vertex</span> <span class="o">=</span> <span class="n">Path</span><span class="p">[</span><span class="n">itr</span><span class="o">%</span><span class="n">pathSize</span><span class="p">]</span>
+			<span class="n">M</span><span class="p">[</span><span class="n">mappedPath</span><span class="p">[</span><span class="n">vertex</span><span class="p">],</span><span class="n">pastEdges</span><span class="p">[</span><span class="n">vertex</span><span class="p">]]</span> <span class="o">=</span> <span class="n">mappedPath</span><span class="p">[</span><span class="n">old_vertex</span><span class="p">]</span>
+			<span class="n">M</span><span class="p">[</span><span class="n">mappedPath</span><span class="p">[</span><span class="n">vertex</span><span class="p">],</span><span class="n">futureEdges</span><span class="p">[</span><span class="n">vertex</span><span class="p">]]</span> <span class="o">=</span> <span class="n">mappedPath</span><span class="p">[</span><span class="n">next_vertex</span><span class="p">]</span>
+			<span class="n">old_vertex</span> <span class="o">=</span> <span class="n">curr_vertex</span>
+			<span class="n">itr</span> <span class="o">+=</span> <span class="mi">1</span>
+
+		<span class="c"># Sign matrix: Stand-alone function</span>
+		<span class="n">M</span> <span class="o">=</span> <span class="n">fixMatrixSigns</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">M</span><span class="p">,</span> <span class="n">M2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+		<span class="n">MasterList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+	<span class="c"># End while</span>
+
+	<span class="k">return</span> <span class="n">MasterList</span>
+</div>
+<div class="viewcode-block" id="faceParse"><a class="viewcode-back" href="../index.html#curves.faceParse">[docs]</a><span class="k">def</span> <span class="nf">faceParse</span><span class="p">(</span><span class="n">alphaEdges</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	function faceParse</span>
+
+<span class="sd">	Separate set of all faces into bridges (4-sided regions) and</span>
+<span class="sd">	&#39;islands&#39; (higher-sided regions) for distance calculator.</span>
+
+<span class="sd">	@param alphaEdges   : set of faces with alpha edges.</span>
+
+<span class="sd">	@return Bridges     : 4-sided regions</span>
+<span class="sd">	@return Islands     : n &gt; 4 - gons</span>
+<span class="sd">	@return lengthCheck : the number of alpha edges included.</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+	<span class="n">Bridges</span><span class="p">,</span> <span class="n">Islands</span> <span class="o">=</span> <span class="p">[],[]</span>
+	<span class="n">lengthCheck</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">alphaEdges</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span> <span class="n">Bridges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span> <span class="n">Islands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span>
+		<span class="n">lengthCheck</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+	<span class="k">return</span> <span class="n">Bridges</span><span class="p">,</span> <span class="n">Islands</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">lengthCheck</span><span class="p">)</span>
+
+<span class="c">######					For Distance Extension 					#######</span></div>
+<div class="viewcode-block" id="connected"><a class="viewcode-back" href="../index.html#curves.connected">[docs]</a><span class="k">def</span> <span class="nf">connected</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">):</span>
+	<span class="n">S1</span>  <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">P1</span><span class="p">)</span>
+	<span class="n">S2</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">P2</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">S1</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="n">S2</span><span class="p">):</span> <span class="k">return</span> <span class="mi">0</span>
+	<span class="k">elif</span> <span class="n">S1</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">S2</span><span class="p">)</span> <span class="ow">and</span> <span class="n">S1</span><span class="o">.</span><span class="n">issuperset</span><span class="p">(</span><span class="n">S2</span><span class="p">):</span> <span class="k">return</span> <span class="mi">0</span>
+	<span class="k">return</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="shareEdge"><a class="viewcode-back" href="../index.html#curves.shareEdge">[docs]</a><span class="k">def</span> <span class="nf">shareEdge</span><span class="p">(</span><span class="n">path1</span><span class="p">,</span> <span class="n">path2</span><span class="p">):</span>
+	<span class="n">share</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">path1</span><span class="p">)</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="n">path2</span><span class="p">):</span> <span class="n">share</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="k">if</span> <span class="n">share</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">intersectionSet</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">path1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">path2</span><span class="p">)</span>
+		<span class="n">numshared</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">intersectionSet</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">numshared</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span> <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="c">#Then they share too much!</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">sharedItem</span> <span class="o">=</span> <span class="n">intersectionSet</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+	<span class="k">return</span> <span class="mi">1</span><span class="p">,</span><span class="n">path2</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">sharedItem</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="findCombinedPaths"><a class="viewcode-back" href="../index.html#curves.findCombinedPaths">[docs]</a><span class="k">def</span> <span class="nf">findCombinedPaths</span><span class="p">(</span> <span class="n">allPaths</span><span class="p">,</span> <span class="n">MLibrary</span><span class="p">):</span>
+	<span class="n">ListofConnected</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="n">pathLibrary</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">allPaths</span><span class="p">)),</span><span class="n">allPaths</span><span class="p">))</span>
+	<span class="n">index1</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="n">path1</span> <span class="ow">in</span> <span class="n">allPaths</span><span class="p">:</span>
+		<span class="n">index2</span> <span class="o">=</span> <span class="mi">0</span>
+		<span class="k">for</span> <span class="n">path2</span> <span class="ow">in</span> <span class="n">allPaths</span><span class="p">:</span>
+			<span class="k">if</span> <span class="n">shareEdge</span><span class="p">(</span><span class="n">path1</span><span class="p">,</span> <span class="n">path2</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+				<span class="n">ListofConnected</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">MLibrary</span><span class="p">[</span><span class="n">index1</span><span class="p">],</span>
+							<span class="n">MLibrary</span><span class="p">[</span><span class="n">index2</span><span class="p">]))</span>
+			<span class="n">index2</span> <span class="o">+=</span> <span class="mi">1</span>
+		<span class="n">index1</span> <span class="o">+=</span> <span class="mi">1</span>
+
+	<span class="k">return</span> <span class="n">ListofConnected</span>
+</div>
+<div class="viewcode-block" id="facesShareTwoEdges"><a class="viewcode-back" href="../index.html#curves.facesShareTwoEdges">[docs]</a><span class="k">def</span> <span class="nf">facesShareTwoEdges</span><span class="p">(</span><span class="n">faces</span><span class="p">):</span>
+	<span class="n">distanceThreeFlag</span> <span class="o">=</span> <span class="mi">0</span>
+
+	<span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">faces</span><span class="p">:</span>
+		<span class="n">facesWithoutFace</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">faces</span><span class="p">)</span>
+		<span class="n">facesWithoutFace</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">face</span><span class="p">)</span>
+		<span class="k">for</span> <span class="n">other</span> <span class="ow">in</span> <span class="n">facesWithoutFace</span><span class="p">:</span>
+			<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">face</span><span class="p">)</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">other</span><span class="p">))</span> <span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span> <span class="n">distanceThreeFlag</span> <span class="o">=</span> <span class="mi">1</span>
+
+	<span class="k">return</span> <span class="n">distanceThreeFlag</span>
+</div>
+<div class="viewcode-block" id="edges"><a class="viewcode-back" href="../index.html#curves.edges">[docs]</a><span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	Function edges</span>
+<span class="sd">	@param M: the matrix, shape (2,num_rows, 4)</span>
+
+<span class="sd">	*return allFaces: tuple of faces including size and set of alpha-edges which bound them.</span>
+<span class="sd">	*return edges: same as allFaces, exceincluding orientation of boundary edges.</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+	<span class="c">#print &#39;called edges&#39;</span>
+	<span class="c"># The em list is needed to hold the tuples of (faceLength, faceEdges)</span>
+	<span class="n">allFaces</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+	<span class="c"># INV: Number of faces found.</span>
+	<span class="n">faces</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">;</span>
+
+	<span class="n">numrows</span><span class="p">,</span> <span class="n">numcols</span> <span class="o">=</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="c">#num_rows, num_cols</span>
+
+	<span class="n">old_Vertices</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span> <span class="c">##list of previous paths</span>
+	<span class="n">bigonFlag</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="c"># Bigons are unwanted structures.</span>
+	<span class="n">Paths</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>  <span class="c"># alpha - edge paths.</span>
+	<span class="n">facesTemp</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+	<span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">numrows</span><span class="p">),</span><span class="nb">range</span><span class="p">(</span><span class="n">numcols</span><span class="p">)):</span>
+		<span class="c">#Set of edges associated with face</span>
+		<span class="n">tr</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="n">face</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+		<span class="k">if</span> <span class="n">faces</span><span class="o">==</span><span class="n">numrows</span><span class="p">:</span> <span class="k">break</span> <span class="c">#upper bound on possible no. faces</span>
+		<span class="c"># Start position in matrix: returning to this means a face has been</span>
+		<span class="c"># enclosed</span>
+		<span class="n">io</span> <span class="o">=</span><span class="n">i</span>
+		<span class="n">jo</span><span class="o">=</span><span class="n">j</span>
+
+		<span class="n">found</span> <span class="o">=</span> <span class="mi">0</span> <span class="c">#exit condition</span>
+		<span class="c"># Number of edges for face. Keeps track of vector solution</span>
+		<span class="n">edges</span><span class="o">=</span><span class="mi">0</span>
+		<span class="n">pathTemp</span> <span class="o">=</span> <span class="p">[];</span>
+
+		<span class="c"># Begin traversal</span>
+		<span class="k">while</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+
+			<span class="n">gval</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]);</span>
+			<span class="c">#current value at index gives next vertex/row</span>
+			<span class="c">#value check</span>
+			<span class="n">arr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">gval</span><span class="p">,:]</span> <span class="o">==</span> <span class="n">i</span><span class="o">%</span><span class="n">numrows</span><span class="p">)</span>
+			<span class="n">arr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">gval</span><span class="p">,:]</span> <span class="o">!=</span> <span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">])</span> <span class="c">#sign check</span>
+
+			<span class="n">i_next</span> <span class="o">=</span> <span class="n">gval</span>
+			<span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="n">numrows</span>
+			<span class="n">i</span><span class="o">=</span> <span class="n">i_next</span>
+
+			<span class="n">new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">arr1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">arr2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">assume_unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+			<span class="c">#ENS: val and sign correct</span>
+			<span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">new</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="n">j</span><span class="o">%</span><span class="mi">2</span><span class="p">)</span> <span class="c">#ENS: beta-&gt;beta, alpha-&gt;alpha</span>
+			<span class="n">j_next</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">new</span><span class="p">[</span><span class="n">ind</span><span class="p">])</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="n">numcols</span> <span class="c">#Always move clockwise</span>
+			<span class="n">j_old</span> <span class="o">=</span> <span class="n">j</span>
+			<span class="n">j</span> <span class="o">=</span> <span class="n">j_next</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="ow">in</span> <span class="n">old_Vertices</span><span class="p">:</span>
+				<span class="k">break</span>
+			<span class="n">old_Vertices</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">))</span>
+			<span class="n">edges</span> <span class="o">+=</span> <span class="mi">1</span>
+
+			<span class="n">alpha_new</span> <span class="o">=</span><span class="p">(</span> <span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">numrows</span><span class="p">;</span>
+			<span class="n">shift</span> <span class="o">=</span> <span class="p">(</span><span class="n">alpha_new</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span>
+
+			<span class="k">if</span> <span class="n">shift</span><span class="o">==</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">j</span><span class="o">%</span><span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+				<span class="n">face</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">alpha_new</span><span class="p">)</span>
+				<span class="n">pathTemp</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">alpha_new</span><span class="p">,(</span><span class="n">j</span><span class="p">)</span><span class="o">%</span><span class="n">numcols</span><span class="p">))</span>
+			<span class="k">elif</span> <span class="n">shift</span><span class="o">==-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">j</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+				<span class="n">face</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+				<span class="n">pathTemp</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">alpha</span><span class="p">,(</span><span class="n">j</span><span class="p">)</span><span class="o">%</span><span class="n">numcols</span><span class="p">))</span>
+			<span class="k">elif</span> <span class="n">shift</span> <span class="o">==</span> <span class="n">numrows</span><span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">alpha</span> <span class="o">==</span><span class="mi">0</span>  <span class="ow">and</span> <span class="n">j</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span> <span class="c">#</span>
+				<span class="n">face</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+				<span class="n">pathTemp</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">alpha</span><span class="p">,(</span><span class="n">j</span><span class="p">)</span><span class="o">%</span><span class="n">numcols</span><span class="p">))</span>
+			<span class="k">elif</span> <span class="n">shift</span> <span class="o">==</span> <span class="mi">1</span><span class="o">-</span><span class="n">numrows</span> <span class="ow">and</span> <span class="n">alpha_new</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">j</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span> <span class="c">#</span>
+				<span class="n">face</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">alpha_new</span><span class="p">)</span>
+				<span class="n">pathTemp</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">alpha_new</span><span class="p">,(</span><span class="n">j</span><span class="p">)</span><span class="o">%</span><span class="n">numcols</span><span class="p">))</span>
+
+			<span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span><span class="o">==</span><span class="p">(</span><span class="n">io</span><span class="p">,</span><span class="n">jo</span><span class="p">):</span>
+				<span class="n">facesTemp</span><span class="p">[</span><span class="n">edges</span><span class="p">]</span> <span class="o">=</span> <span class="n">facesTemp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span><span class="mi">1</span>
+				<span class="k">if</span> <span class="n">edges</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+					<span class="n">bigonFlag</span> <span class="o">=</span> <span class="mi">1</span>
+				<span class="k">if</span> <span class="ow">not</span> <span class="n">bigonFlag</span><span class="p">:</span>
+					<span class="n">Paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pathTemp</span><span class="p">)</span>
+					<span class="n">faces</span> <span class="o">+=</span> <span class="mi">1</span>
+					<span class="n">found</span> <span class="o">=</span> <span class="mi">1</span>
+					<span class="n">allFaces</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">edges</span><span class="p">,</span><span class="n">face</span><span class="p">))</span>
+	<span class="k">return</span> <span class="n">allFaces</span><span class="p">,</span> <span class="n">Paths</span>
+</div>
+<div class="viewcode-block" id="boundaryCount"><a class="viewcode-back" href="../index.html#curves.boundaryCount">[docs]</a><span class="k">def</span> <span class="nf">boundaryCount</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	Function boundaryCount</span>
+<span class="sd">	@param M: the matrix, shape (2,num_vertices,4)</span>
+<span class="sd">	Note that M.shape==(2,n,4)</span>
+
+<span class="sd">	&#39;Simply&#39; count the number of faces bounded by two filling curves on a surface.</span>
+<span class="sd">	Curves must be encoded as matrix according to vertices of intersection and</span>
+<span class="sd">	associated orientation.</span>
+
+<span class="sd">	@return faces: number of faces</span>
+<span class="sd">	@return bigon: 1 iff a bigon is found</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+
+	<span class="n">faces</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="n">numrows</span><span class="p">,</span> <span class="n">numcols</span> <span class="o">=</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="c">#num_rows, num_cols</span>
+	<span class="n">oldEdges</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span> <span class="c">##list of previous edge paths</span>
+	<span class="n">bigonFlag</span> <span class="o">=</span><span class="mi">0</span>
+
+	<span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">numrows</span><span class="p">),</span><span class="nb">range</span><span class="p">(</span><span class="n">numcols</span><span class="p">)):</span>
+		<span class="c"># upper bound on possible no. faces is number of vertices</span>
+		<span class="k">if</span> <span class="n">faces</span><span class="o">==</span><span class="n">numrows</span><span class="p">:</span> <span class="k">break</span>
+
+		<span class="n">io</span> <span class="o">=</span><span class="n">i</span>
+		<span class="n">jo</span><span class="o">=</span><span class="n">j</span>
+		<span class="c">#First matrix element; will go to vertex M[0,i,j]</span>
+
+		<span class="n">found</span> <span class="o">=</span> <span class="mi">0</span> <span class="c">#Exit condition</span>
+		<span class="n">pathLength</span><span class="o">=</span><span class="mi">0</span> <span class="c"># Keep track of path length</span>
+
+		<span class="k">while</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+			<span class="n">gval</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]);</span>
+			<span class="c">#current value at index gives next vertex/row</span>
+
+			<span class="n">arr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">gval</span><span class="p">,:]</span> <span class="o">==</span> <span class="n">i</span><span class="o">%</span><span class="n">numrows</span><span class="p">)</span> <span class="c">#value check</span>
+			<span class="n">arr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">gval</span><span class="p">,:]</span> <span class="o">==</span> <span class="o">-</span><span class="n">M</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]);</span> <span class="c">#sign should flip +/-</span>
+			<span class="n">i</span> <span class="o">=</span> <span class="n">gval</span> <span class="c"># Go to next vertex/row</span>
+			<span class="n">new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">arr1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">arr2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">assume_unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+			<span class="c">#ENS: val and sign correct</span>
+
+			<span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">new</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="n">j</span><span class="o">%</span><span class="mi">2</span><span class="p">)</span>
+			<span class="c">#ENS: beta-&gt;beta, alpha-&gt;alpha</span>
+
+			<span class="n">j</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">new</span><span class="p">[</span><span class="n">ind</span><span class="p">])</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="n">numcols</span>
+			<span class="c">#Always move clockwise - to next edge</span>
+
+			<span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="ow">in</span> <span class="n">oldEdges</span><span class="p">:</span> <span class="k">break</span>
+			<span class="n">oldEdges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">))</span>
+			<span class="c"># To save work and not go on old paths.</span>
+			<span class="c"># Also so we don&#39;t count faces twice...</span>
+			<span class="n">pathLength</span> <span class="o">+=</span> <span class="mi">1</span>
+			<span class="c"># The path length is the number of edges traversed in the current face.</span>
+
+			<span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span><span class="o">==</span><span class="p">(</span><span class="n">io</span><span class="p">,</span><span class="n">jo</span><span class="p">):</span>
+				<span class="k">if</span> <span class="n">pathLength</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span> <span class="n">bigonFlag</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+				<span class="c"># Two edges to a face --&gt; bigon</span>
+				<span class="n">faces</span> <span class="o">+=</span> <span class="mi">1</span>
+				<span class="n">found</span> <span class="o">=</span> <span class="mi">1</span> <span class="c">#INV: found = 1 -&gt; has found a bdy curve</span>
+	<span class="k">return</span> <span class="n">faces</span><span class="p">,</span> <span class="n">bigonFlag</span>
+</div>
+<span class="k">def</span> <span class="nf">vectorSolution</span><span class="p">(</span><span class="n">edges</span><span class="p">):</span>
+
+	<span class="n">solution</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+	<span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">face</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">solution</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+			<span class="n">solution</span><span class="p">[</span><span class="n">face</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">solution</span><span class="p">[</span><span class="n">face</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+	<span class="k">return</span> <span class="n">solution</span>
+
+<div class="viewcode-block" id="genus"><a class="viewcode-back" href="../index.html#curves.genus">[docs]</a><span class="k">def</span> <span class="nf">genus</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">euler</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">boundaries</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	Function genus</span>
+<span class="sd">	@param G : matrix corresponding to curve pair - shape (2, num_vertices, 4)</span>
+<span class="sd">	@param euler : 0 if euler characteristic not needed, else 1</span>
+
+<span class="sd">	Compute the genus of the span of a curve pair, i.e. the minimal genus surface</span>
+<span class="sd">	on which they fill.</span>
+
+<span class="sd">	@return g : genus</span>
+<span class="sd">	@return X : euler characteristic*</span>
+<span class="sd">	NOTE: actually returns a tuple, looking</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+	<span class="n">V</span> <span class="o">=</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="c"># vertices</span>
+	<span class="n">P</span><span class="p">,</span> <span class="n">bigon</span> <span class="o">=</span> <span class="n">boundaryCount</span><span class="p">(</span><span class="n">M</span><span class="p">)</span> <span class="c"># Polygons in the complement of curve pair</span>
+	<span class="c">#if bigon is 1: P -= 1 # pull away one bigon</span>
+	<span class="c">#Euler characteristic (since edges = 2*vertices) is P - V</span>
+	<span class="c"># originally X = V-E+P</span>
+	<span class="n">X</span> <span class="o">=</span> <span class="n">P</span><span class="o">-</span><span class="n">V</span><span class="o">+</span><span class="n">boundaries</span>
+
+	<span class="c"># genus = 1 - 0.5*euler_characteristic</span>
+	<span class="n">Genus</span> <span class="o">=</span>  <span class="p">(</span><span class="mi">2</span><span class="o">-</span><span class="n">X</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+	<span class="n">returnVal</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span><span class="n">Genus</span><span class="p">),(</span><span class="mi">1</span><span class="p">,(</span><span class="n">Genus</span><span class="p">,</span><span class="n">X</span><span class="p">))])</span>
+	<span class="c"># For return purposes only.</span>
+
+	<span class="k">if</span> <span class="n">bigon</span><span class="p">:</span> <span class="n">Genus</span> <span class="o">-=</span> <span class="mi">1</span> <span class="c"># Bigons steal genus; this gives it back.</span>
+
+	<span class="k">return</span> <span class="n">returnVal</span><span class="p">[</span><span class="n">euler</span><span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="testCollection"><a class="viewcode-back" href="../index.html#curves.testCollection">[docs]</a><span class="k">def</span> <span class="nf">testCollection</span><span class="p">(</span><span class="n">matrixList</span><span class="p">,</span> <span class="n">originalGenus</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	function testCollection</span>
+<span class="sd">	Test a collection of matrices to see if they fill a given genus.</span>
+<span class="sd">	Return a list of bool and a dictionary containing the matrices without bigons.</span>
+<span class="sd">	Note: Matrices with bigons are still counted in the calculation, but are not returned.</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+	<span class="n">genusCollection</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="n">matrixLibrary</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+	<span class="k">for</span> <span class="n">M</span> <span class="ow">in</span> <span class="n">matrixList</span><span class="p">:</span>
+
+		<span class="n">bigon</span> <span class="o">=</span> <span class="n">boundaryCount</span><span class="p">(</span><span class="n">M</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+		<span class="n">Genus</span> <span class="o">=</span> <span class="n">genus</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+		<span class="n">matrixLibrary</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span>
+		<span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+		<span class="k">if</span> <span class="n">bigon</span><span class="p">:</span>
+			<span class="n">Genus</span>  <span class="o">=</span> <span class="mi">0</span> <span class="c"># If it has a bigon, it should automatically fail</span>
+
+		<span class="n">genusCollection</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Genus</span><span class="p">)</span>
+	<span class="c"># Test if all fill and thus distance g.t. 3</span>
+	<span class="n">test</span> <span class="o">=</span> <span class="p">[</span><span class="n">Genus</span> <span class="o">==</span> <span class="n">originalGenus</span> <span class="k">for</span> <span class="n">Genus</span> <span class="ow">in</span> <span class="n">genusCollection</span><span class="p">]</span>
+	<span class="k">return</span> <span class="n">test</span><span class="p">,</span> <span class="n">matrixLibrary</span>
+</div>
+<div class="viewcode-block" id="fourgonTest"><a class="viewcode-back" href="../index.html#curves.fourgonTest">[docs]</a><span class="k">def</span> <span class="nf">fourgonTest</span><span class="p">(</span><span class="n">F4</span><span class="p">,</span> <span class="n">Fn</span><span class="p">):</span>
+	<span class="k">for</span> <span class="n">islandFace</span> <span class="ow">in</span> <span class="n">Fn</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">bridgeFace</span> <span class="ow">in</span> <span class="n">F4</span><span class="p">:</span>
+			<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">islandFace</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">bridgeFace</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> <span class="bp">True</span>
+	<span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="Three"><a class="viewcode-back" href="../index.html#curves.Three">[docs]</a><span class="k">def</span> <span class="nf">Three</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">allPaths</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	function Three</span>
+<span class="sd">	Returns 1 if the curve pair is distance three,</span>
+<span class="sd">	and 0 otherwise.</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+
+	<span class="n">three</span><span class="p">,</span> <span class="n">matrixLibrary</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">dict</span><span class="p">()</span>
+
+
+	<span class="n">F0</span><span class="p">,</span> <span class="n">bigon</span> <span class="o">=</span> <span class="n">boundaryCount</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+	<span class="n">originalGenus</span> <span class="o">=</span> <span class="n">genus</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+	<span class="c">#Calculate face alpha edges and alpha edge paths</span>
+	<span class="n">Faces</span><span class="p">,</span> <span class="n">edgePaths</span> <span class="o">=</span> <span class="n">edges</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+	<span class="n">Bridges</span><span class="p">,</span> <span class="n">Islands</span><span class="p">,</span> <span class="n">lengthCheck</span> <span class="o">=</span> <span class="n">faceParse</span><span class="p">(</span><span class="n">Faces</span><span class="p">)</span>
+
+	<span class="c"># Bridges are faces bounded by four edges.</span>
+	<span class="c"># Islands are bounded bt more than four, say six or eight...</span>
+	<span class="n">bridgeFaces</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">face</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">Bridges</span><span class="p">]</span>
+	<span class="n">islandFaces</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">face</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">Islands</span><span class="p">]</span>
+
+	<span class="c">############# Quick and dirty checks for distance three #############</span>
+	<span class="k">if</span> <span class="n">F0</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">:</span>
+		<span class="n">three</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="c">#	print &#39;&#39;&#39;The complement contains a polygon which shares an edge with</span>
+	<span class="c">#			itself, and so is distance 3. &#39;&#39;&#39;</span>
+
+
+	<span class="c"># If any face is larger than the number of vertices, it will definitely</span>
+	<span class="c"># Share an edge with itself. Therefore distance three.</span>
+	<span class="n">faceSizeTest</span> <span class="o">=</span> <span class="p">[</span><span class="n">face</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="o">&gt;</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">Faces</span><span class="p">]</span>
+	<span class="k">if</span> <span class="bp">True</span> <span class="ow">in</span> <span class="n">faceSizeTest</span><span class="p">:</span>
+		<span class="n">three</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="c">#	print &#39;&#39;&#39;The complement contains a polygon which shares an edge with</span>
+	<span class="c">#			itself, and so is distance 3. &#39;&#39;&#39;</span>
+
+
+	<span class="k">if</span>  <span class="n">fourgonTest</span><span class="p">(</span><span class="n">Bridges</span><span class="p">,</span> <span class="n">Islands</span><span class="p">):</span>
+		<span class="n">three</span> <span class="o">=</span> <span class="mi">1</span>
+
+
+	<span class="k">if</span> <span class="n">lengthCheck</span> <span class="o">!=</span> <span class="mi">2</span><span class="o">*</span><span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+		<span class="n">three</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="c">#	print &#39;&#39;&#39;The complement contains a polygon which shares an edge with</span>
+	<span class="c">#			itself, and so is distance 3. &#39;&#39;&#39;</span>
+	<span class="c"># See function faceParse</span>
+	<span class="c"># If this is true, then some face is sharing an edge with itself.</span>
+	<span class="c"># It can&#39;t be a four-gon, since that would mean we have a multi-curve.</span>
+	<span class="c"># So it must be an island, which means that there is a curve</span>
+	<span class="c"># in the complement which is distance two. Thus the original pair is</span>
+	<span class="c"># Distance three.</span>
+
+	<span class="k">if</span> <span class="n">facesShareTwoEdges</span><span class="p">(</span><span class="n">islandFaces</span><span class="p">):</span>
+		<span class="n">three</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="c">#	print &#39;&#39;&#39; Found two faces that share multiple edges: A curve that</span>
+	<span class="c">#			  intersects the non-reference curve only two times has been</span>
+	<span class="c">#			  found. This curve cannot fill and so the pair is distance 3.</span>
+	<span class="c">#		  &#39;&#39;&#39;</span>
+
+	<span class="c"># Means there is a path of length two.</span>
+	<span class="c"># Since a curve pair with two intersections cannot fill on any genus &gt;1 ,</span>
+	<span class="c"># The two curves will be distance three.</span>
+
+	<span class="c">#Find linking edge paths in &quot;mesh&quot;</span>
+	<span class="n">faces</span>  <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bridgeFaces</span><span class="p">)</span>
+	<span class="n">faces</span> <span class="o">+=</span> <span class="n">islandFaces</span>
+
+	<span class="c">#Build paths into curves and intersect with alpha</span>
+	<span class="n">matrixList</span> <span class="o">=</span> <span class="n">buildMatrices</span><span class="p">(</span><span class="n">edgePaths</span><span class="p">,</span> <span class="n">allPaths</span><span class="p">)</span>
+
+	<span class="n">genusTest</span><span class="p">,</span> <span class="n">matrixLibrary</span> <span class="o">=</span> <span class="n">testCollection</span><span class="p">(</span><span class="n">matrixList</span><span class="p">,</span><span class="n">originalGenus</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">three</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">three</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="bp">False</span> <span class="ow">in</span> <span class="n">genusTest</span> <span class="k">else</span> <span class="mi">0</span>
+
+	<span class="c"># Output</span>
+	<span class="n">returnVals</span> <span class="o">=</span> <span class="p">[</span><span class="n">three</span><span class="p">,</span> <span class="n">matrixLibrary</span><span class="p">]</span>
+	<span class="k">return</span> <span class="n">returnVals</span>
+</div>
+<div class="viewcode-block" id="distance"><a class="viewcode-back" href="../index.html#curves.distance">[docs]</a><span class="k">def</span> <span class="nf">distance</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">allPaths</span><span class="p">):</span>
+	<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">	Function distance</span>
+
+<span class="sd">	@param M : the matrix</span>
+
+<span class="sd">	Computes the distance between the two curves embedded in the matrix.</span>
+<span class="sd">	If this distance is three, tries to use simple paths to extend the distance</span>
+<span class="sd">	in a different direction. If this fails, simply returns three;</span>
+<span class="sd">	else it prints a curve that is distance four from alpha.</span>
+
+<span class="sd">	@return dist: the distance if three/four, or &#39;Higher&#39; if dist is &gt; 4.</span>
+<span class="sd">	&#39;&#39;&#39;</span>
+
+	<span class="n">distIsThree</span><span class="p">,</span> <span class="n">Lib</span> <span class="o">=</span> <span class="n">Three</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">allPaths</span><span class="p">)</span>
+
+	<span class="n">dist</span> <span class="o">=</span> <span class="mi">3</span> <span class="k">if</span> <span class="n">distIsThree</span>  <span class="k">else</span> <span class="s">&#39;at least 4!&#39;</span>
+
+	<span class="k">return</span> <span class="n">dist</span><span class="p">,</span> <span class="n">Lib</span>
+</div>
+<span class="k">def</span> <span class="nf">ladderConvert</span><span class="p">(</span><span class="n">ladderTop</span><span class="p">,</span> <span class="n">ladderBottom</span><span class="p">):</span>
+	<span class="k">print</span> <span class="n">ladderTop</span><span class="p">,</span> <span class="n">ladderBottom</span>
+	<span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ladderTop</span><span class="p">)</span>
+	<span class="n">newTop</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39; &#39;</span><span class="p">]</span><span class="o">*</span><span class="n">n</span>
+	<span class="n">newBottom</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">newTop</span><span class="p">)</span>
+
+	<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+
+		<span class="k">if</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ladderTop</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ladderBottom</span><span class="p">:</span>
+			<span class="n">newTop</span><span class="p">[</span><span class="n">ladderTop</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)]</span>  <span class="o">=</span> <span class="n">ladderBottom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+			<span class="n">newBottom</span><span class="p">[</span><span class="n">ladderBottom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ladderTop</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+
+		<span class="k">elif</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ladderTop</span><span class="p">:</span>
+			<span class="n">ladderTopTemp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ladderTop</span><span class="p">)</span>
+			<span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">ladderTop</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)];</span> <span class="n">ladderTopTemp</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">None</span><span class="c">#ladderTopTemp.remove(j)</span>
+			<span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ladderTopTemp</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">))</span>
+			<span class="n">newTop</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+			<span class="n">newTop</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+		<span class="k">elif</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ladderBottom</span><span class="p">:</span>
+			<span class="n">ladderBottomTemp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ladderBottom</span><span class="p">)</span>
+			<span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">ladderBottom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)];</span> <span class="n">ladderBottomTemp</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">None</span> <span class="c">#ladderBottomTemp.remove(j)</span>
+			<span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ladderBottomTemp</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">))</span>
+			<span class="n">newBottom</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+			<span class="n">newBottom</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+	<span class="k">return</span> <span class="n">newTop</span><span class="p">,</span> <span class="n">newBottom</span>
+
+
+<span class="k">def</span> <span class="nf">ladder_is_multicurve</span><span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="n">bottom</span><span class="p">):</span>
+
+	<span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
+
+	<span class="n">j0</span> <span class="o">=</span> <span class="n">top</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="n">counter</span> <span class="o">=</span> <span class="mi">1</span>
+
+	<span class="n">j</span> <span class="o">=</span> <span class="n">bottom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="n">bottom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+	<span class="n">oldIndex</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">while</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">j0</span><span class="p">:</span>
+
+		<span class="n">old_j</span> <span class="o">=</span> <span class="n">j</span>
+		<span class="k">if</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">top</span><span class="p">:</span>
+			<span class="n">nextIndex</span> <span class="o">=</span> <span class="n">top</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+			<span class="n">j</span> <span class="o">=</span> <span class="n">bottom</span><span class="p">[</span><span class="n">nextIndex</span><span class="p">]</span>
+
+			<span class="k">if</span> <span class="bp">None</span> <span class="ow">in</span> <span class="n">top</span><span class="p">:</span>
+				<span class="n">top</span><span class="p">[</span><span class="n">top</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">None</span><span class="p">)]</span> <span class="o">=</span>  <span class="n">old_j</span>
+			<span class="k">elif</span> <span class="bp">None</span> <span class="ow">in</span> <span class="n">bottom</span><span class="p">:</span>
+				<span class="n">bottom</span><span class="p">[</span><span class="n">bottom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">None</span><span class="p">)]</span> <span class="o">=</span>  <span class="n">old_j</span>
+
+			<span class="n">bottom</span><span class="p">[</span><span class="n">nextIndex</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+
+		<span class="k">elif</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">bottom</span><span class="p">:</span>
+			<span class="n">nextIndex</span> <span class="o">=</span> <span class="n">bottom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+			<span class="n">j</span> <span class="o">=</span> <span class="n">top</span><span class="p">[</span><span class="n">nextIndex</span><span class="p">]</span>
+
+			<span class="k">if</span> <span class="bp">None</span> <span class="ow">in</span> <span class="n">top</span><span class="p">:</span>
+				<span class="n">top</span><span class="p">[</span><span class="n">top</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">None</span><span class="p">)]</span> <span class="o">=</span>  <span class="n">old_j</span>
+			<span class="k">elif</span> <span class="bp">None</span> <span class="ow">in</span> <span class="n">bottom</span><span class="p">:</span>
+				<span class="n">bottom</span><span class="p">[</span><span class="n">bottom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">None</span><span class="p">)]</span> <span class="o">=</span>  <span class="n">old_j</span>
+
+			<span class="n">top</span><span class="p">[</span><span class="n">nextIndex</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+
+		<span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+	<span class="k">if</span> <span class="bp">None</span> <span class="ow">in</span> <span class="n">top</span><span class="p">:</span>
+		<span class="n">top</span><span class="p">[</span><span class="n">top</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">None</span><span class="p">)]</span> <span class="o">=</span>  <span class="n">j</span>
+	<span class="k">elif</span> <span class="bp">None</span> <span class="ow">in</span> <span class="n">bottom</span><span class="p">:</span>
+		<span class="n">bottom</span><span class="p">[</span><span class="n">bottom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">None</span><span class="p">)]</span> <span class="o">=</span>  <span class="n">j</span>
+
+
+	<span class="k">return</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">counter</span> <span class="o">!=</span> <span class="n">n</span> <span class="k">else</span> <span class="mi">0</span>
+
+<span class="k">def</span> <span class="nf">matrix_is_multicurve</span><span class="p">(</span><span class="n">beta</span><span class="p">):</span>
+
+	<span class="n">top</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="n">bottom</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+	<span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="n">j</span> <span class="o">=</span> <span class="n">top</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+	<span class="n">start</span> <span class="o">=</span> <span class="mi">100</span>
+	<span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+
+	<span class="k">while</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">start</span><span class="p">:</span>
+		<span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+		<span class="n">start</span> <span class="o">=</span> <span class="n">top</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+		<span class="k">if</span> <span class="n">top</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="n">index</span> <span class="p">:</span>
+			<span class="n">next_index</span> <span class="o">=</span> <span class="n">j</span>
+			<span class="n">j</span> <span class="o">=</span> <span class="n">bottom</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+			<span class="n">index</span> <span class="o">=</span> <span class="n">next_index</span>
+
+		<span class="k">elif</span> <span class="n">bottom</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
+			<span class="n">next_index</span> <span class="o">=</span> <span class="n">j</span>
+			<span class="n">j</span> <span class="o">=</span> <span class="n">top</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+			<span class="n">index</span> <span class="o">=</span> <span class="n">next_index</span>
+
+		<span class="k">if</span> <span class="n">top</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="n">bottom</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span> <span class="k">return</span> <span class="bp">True</span>
+		<span class="k">print</span> <span class="s">&#39;j&#39;</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span><span class="s">&#39;next_index: &#39;</span><span class="p">,</span>  <span class="n">index</span>
+
+	<span class="k">return</span> <span class="bp">False</span> <span class="k">if</span> <span class="n">counter</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">top</span><span class="p">)</span> <span class="k">else</span> <span class="bp">True</span>
+
+
+
+<span class="k">class</span> <span class="nc">curvePair</span><span class="p">:</span>
+
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">topBeta</span><span class="p">,</span><span class="n">bottomBeta</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+
+		<span class="n">is_ladder</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">top</span><span class="p">,</span> <span class="n">bottom</span><span class="p">:</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="ow">in</span> <span class="n">top</span> <span class="ow">or</span> <span class="mi">0</span> <span class="ow">in</span> <span class="n">bottom</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">is_ladder</span><span class="p">(</span><span class="n">topBeta</span><span class="p">,</span><span class="n">bottomBeta</span><span class="p">):</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">ladder</span> <span class="o">=</span> <span class="p">[</span><span class="n">topBeta</span><span class="p">,</span> <span class="n">bottomBeta</span><span class="p">]</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">ladder</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+		<span class="k">if</span> <span class="n">is_ladder</span><span class="p">(</span><span class="n">topBeta</span><span class="p">,</span> <span class="n">bottomBeta</span><span class="p">):</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">ladderConvert</span><span class="p">(</span><span class="n">topBeta</span><span class="p">,</span> <span class="n">bottomBeta</span><span class="p">)</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">top</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">bottom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">top</span> <span class="o">=</span> <span class="n">topBeta</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">bottom</span> <span class="o">=</span> <span class="n">bottomBeta</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="p">]</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="p">)</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">top</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottom</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">matrix</span> <span class="o">=</span> <span class="n">fixMatrixSigns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">)</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">boundaryCount</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">genus</span> <span class="o">=</span> <span class="n">genus</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">edges</span> <span class="o">=</span> <span class="n">edges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">)</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">solution</span> <span class="o">=</span> <span class="n">vectorSolution</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+
+		<span class="k">if</span> <span class="n">graph</span> <span class="ow">is</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">loops</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">gammas</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">loops</span> <span class="o">=</span> <span class="p">[]</span>
+
+		<span class="k">if</span> <span class="n">dist</span> <span class="ow">is</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">distance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">loopMatrices</span> <span class="o">=</span> <span class="n">distance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">loops</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">distance</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+<span class="k">def</span> <span class="nf">test_permutations</span><span class="p">(</span><span class="n">original_ladder</span><span class="p">):</span>
+	<span class="n">distance4</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="n">distance3</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+	<span class="n">ladder</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">original_ladder</span><span class="p">)</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">original_ladder</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ladder</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="n">ladder_is_multicurve</span><span class="p">(</span><span class="o">*</span><span class="n">ladder</span><span class="p">):</span>
+				<span class="n">perm</span> <span class="o">=</span> <span class="n">curvePair</span><span class="p">(</span><span class="o">*</span><span class="n">ladder</span><span class="p">)</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">perm</span> <span class="o">=</span> <span class="bp">None</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="n">perm</span> <span class="ow">is</span> <span class="bp">None</span> <span class="p">:</span>
+				<span class="k">if</span> <span class="n">perm</span><span class="o">.</span><span class="n">distance</span> <span class="ow">is</span> <span class="mi">4</span><span class="p">:</span>
+					<span class="n">distance4</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">perm</span><span class="p">)</span>
+				<span class="k">else</span><span class="p">:</span>
+					<span class="n">distance3</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">perm</span><span class="p">)</span>
+			<span class="k">else</span><span class="p">:</span> <span class="k">pass</span>
+			<span class="n">first_vertex</span> <span class="o">=</span> <span class="n">ladder</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+			<span class="n">ladder</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">first_vertex</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance4</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="k">print</span> <span class="s">&#39; Found no distance four permutations of the ladder. &#39;</span>
+
+
+		<span class="k">print</span> <span class="s">&#39;Distance 3 single curves: &#39;</span>
+		<span class="k">for</span> <span class="n">curve</span> <span class="ow">in</span> <span class="n">distance3</span><span class="p">:</span>
+			<span class="k">print</span> <span class="s">&#39;top: &#39;</span><span class="p">,</span> <span class="n">curve</span><span class="o">.</span><span class="n">ladder</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+			<span class="k">print</span> <span class="s">&#39;bottom: &#39;</span><span class="p">,</span> <span class="n">curve</span><span class="o">.</span><span class="n">ladder</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+		<span class="k">print</span> <span class="s">&#39;Distance 4 single curves: &#39;</span>
+		<span class="k">for</span> <span class="n">curve</span> <span class="ow">in</span> <span class="n">distance4</span><span class="p">:</span>
+			<span class="k">print</span> <span class="s">&#39;top:    &#39;</span><span class="p">,</span> <span class="n">curve</span><span class="o">.</span><span class="n">ladder</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+			<span class="k">print</span> <span class="s">&#39;bottom: &#39;</span><span class="p">,</span> <span class="n">curve</span><span class="o">.</span><span class="n">ladder</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+		<span class="k">return</span> <span class="n">distance4</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="k">print</span> <span class="s">&quot;You didn&#39;t give me a ladder! &quot;</span>
+		<span class="k">return</span> <span class="p">[]</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">MICC . documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Matt Morse, Paul Glenn.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
