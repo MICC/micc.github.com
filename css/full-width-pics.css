@@ -12,7 +12,7 @@ body {
 	background-size: contain;
 	text-align: center;
 	padding: 120px 20px;
-	height: 400px;
+	/*height: 400px;*/
 }
 
 .full-width-image-2 {
@@ -25,7 +25,7 @@ body {
 	margin-bottom: 20px;
 	text-align: center;
 	padding:120px 0;
-	height: 400px;
+	/*height: 400px;*/
 }
 
 .logo-wrapper {
